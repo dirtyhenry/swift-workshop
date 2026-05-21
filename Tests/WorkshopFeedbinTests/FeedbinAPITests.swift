@@ -72,8 +72,11 @@ struct FeedbinAPITests {
                 "id": 2080,
                 "feed_id": 42,
                 "url": "https://example.com/post",
+                "extracted_content_url": "https://extract.feedbin.com/parser/feedbin/abc123",
+                "published": "2026-05-21T07:30:00.000000Z",
                 "created_at": "2026-05-21T08:00:00.000000Z",
                 "title": "Hello, World",
+                "author": "Jane Doe",
                 "summary": "A short summary.",
                 "content": "<p>Hi there.</p>"
               }
@@ -90,10 +93,74 @@ struct FeedbinAPITests {
         #expect(entry.id == 2080)
         #expect(entry.feedId == 42)
         #expect(entry.url == "https://example.com/post")
+        #expect(entry.extractedContentUrl == "https://extract.feedbin.com/parser/feedbin/abc123")
+        #expect(entry.published == "2026-05-21T07:30:00.000000Z")
         #expect(entry.createdAt == "2026-05-21T08:00:00.000000Z")
         #expect(entry.title == "Hello, World")
+        #expect(entry.author == "Jane Doe")
         #expect(entry.summary == "A short summary.")
         #expect(entry.content == "<p>Hi there.</p>")
+    }
+
+    @Test func decodesFeedbinEntryWithNullableFieldsNull() throws {
+        let json = Data(
+            """
+            [
+              {
+                "id": 2081,
+                "feed_id": 42,
+                "url": "https://example.com/tweet",
+                "extracted_content_url": "https://extract.feedbin.com/parser/feedbin/def456",
+                "published": "2026-05-21T07:30:00.000000Z",
+                "created_at": "2026-05-21T08:00:00.000000Z",
+                "title": null,
+                "author": null,
+                "summary": "",
+                "content": null
+              }
+            ]
+            """.utf8
+        )
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decoded = try decoder.decode(FeedbinEntriesEndpoint.Response.self, from: json)
+
+        try #require(decoded.count == 1)
+        let entry = decoded[0]
+        #expect(entry.title == nil)
+        #expect(entry.author == nil)
+        #expect(entry.content == nil)
+        #expect(entry.summary == "")
+    }
+
+    @Test func decodesFeedbinEntryWithMissingNullableKeys() throws {
+        let json = Data(
+            """
+            [
+              {
+                "id": 2082,
+                "feed_id": 42,
+                "url": "https://example.com/post",
+                "extracted_content_url": "https://extract.feedbin.com/parser/feedbin/ghi789",
+                "published": "2026-05-21T07:30:00.000000Z",
+                "created_at": "2026-05-21T08:00:00.000000Z",
+                "summary": "Just a summary."
+              }
+            ]
+            """.utf8
+        )
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decoded = try decoder.decode(FeedbinEntriesEndpoint.Response.self, from: json)
+
+        try #require(decoded.count == 1)
+        let entry = decoded[0]
+        #expect(entry.title == nil)
+        #expect(entry.author == nil)
+        #expect(entry.content == nil)
+        #expect(entry.summary == "Just a summary.")
     }
 
     // MARK: - Request body encoding round-trip
